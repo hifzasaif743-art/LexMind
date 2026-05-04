@@ -1,0 +1,10 @@
+LexMind Knowledge Base - Sample Document 5
+
+Onboarding Notes (Example)
+--------------------------
+1) Put your PDFs/TXTs in this folder: knowledge_base/
+2) Update PDF_PATH in main.py to point to one PDF you want indexed.
+3) Run: python main.py --setup
+4) Then: python main.py --test
+
+Replace these with your real onboarding materials.

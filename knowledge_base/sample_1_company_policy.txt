@@ -1,0 +1,12 @@
+LexMind Knowledge Base - Sample Document 1
+
+Company Policy (Example)
+------------------------
+This is a placeholder document you can replace with real business documents.
+
+Topics:
+- Confidentiality expectations
+- Data handling basics
+- Retention and deletion policy
+
+Replace this file with a real PDF/TXT for your scenario.

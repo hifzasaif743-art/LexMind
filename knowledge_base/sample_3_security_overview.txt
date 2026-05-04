@@ -1,0 +1,9 @@
+LexMind Knowledge Base - Sample Document 3
+
+Security Overview (Example)
+---------------------------
+- Access control: least privilege
+- Secrets: never stored in git
+- Incident response: report issues within 24 hours
+
+Replace this with your real security notes or policies.

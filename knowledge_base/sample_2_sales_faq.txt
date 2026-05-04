@@ -1,0 +1,14 @@
+LexMind Knowledge Base - Sample Document 2
+
+Sales FAQ (Example)
+-------------------
+Q: What do you sell?
+A: Example product/service description.
+
+Q: Typical contract term?
+A: Example: 12 months.
+
+Q: Refund policy?
+A: Example: refunds evaluated case-by-case per agreement.
+
+Replace this file with your real docs.

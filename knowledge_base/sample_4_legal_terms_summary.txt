@@ -1,0 +1,9 @@
+LexMind Knowledge Base - Sample Document 4
+
+Legal Terms Summary (Example)
+-----------------------------
+- NDA: Non-disclosure agreement protecting confidential information.
+- Indemnity: obligation to cover losses under certain conditions.
+- Limitation of liability: caps damages exposure.
+
+Replace this with actual legal docs or summaries used in your scenario.
