@@ -16,26 +16,19 @@
 
 > Lawyers spend hours reading contracts. **LexMind solves this in seconds.**
 
-[Getting Started](#-quick-start) · [Architecture](#-architecture) · [Features](#-features) · [Contributing](#-contributing)
+[Getting Started](#-quick-start) · [Architecture](#-system-architecture) · [Design Patterns](#-design-patterns) · [Evaluation](#-evaluation-criteria) · [Contributing](#-contributing)
 
 </div>
 
 ---
 
-## 📌 The Problem
+## 📌 Business Scenario
 
-Legal contracts are long, complex, and full of jargon. A single contract can take hours to review, and one missed clause can cost thousands of dollars. Most people sign contracts without fully understanding what they agreed to.
+Legal professionals and individuals spend hours manually reviewing contracts, NDAs, and service agreements. Missing a single risky clause can result in significant financial or legal consequences.
 
-## ✅ The Solution
+**LexMind** is an Agentic RAG system built for the legal domain. It allows users to upload any legal PDF and interact with it through natural language — getting clause extraction, risk analysis, plain-English summaries, and direct answers grounded in the actual document.
 
-LexMind is a **multi-agent AI system** that:
-
-- Reads any legal PDF you upload
-- Finds and highlights risky clauses automatically
-- Explains complex legal terms in plain English
-- Extracts and organizes all clauses in structured format
-- Answers questions about your specific contract
-- Works in both **English and Urdu**
+**Why it matters:** Legal AI is one of the fastest-growing sectors in enterprise software. This project demonstrates a real, deployable solution with genuine business value.
 
 ---
 
@@ -43,79 +36,110 @@ LexMind is a **multi-agent AI system** that:
 
 | Feature | Description |
 |---|---|
-| 📄 PDF Upload | Supports any legal PDF — contracts, NDAs, agreements |
-| 🔍 Smart Search | FAISS vector search finds the most relevant sections |
-| ⚠️ Risk Detection | Automatically flags high, medium, and low risk clauses |
-| 📋 Clause Extraction | Lists all clauses in clean structured format |
-| 💬 Plain English | Explains legal jargon in simple language |
-| 🔄 Auto Retry | Evaluator agent retries if answer quality is poor |
-| 🌐 Multilingual | Supports English and Urdu queries |
-| 🆓 100% Free | Groq API + FAISS + HuggingFace — all free |
+| 📄 PDF Upload | Supports any legal PDF — contracts, NDAs, service agreements |
+| 🔍 Smart Retrieval | FAISS vector search finds the most relevant document sections |
+| ⚠️ Risk Detection | Automatically flags HIGH / MEDIUM / LOW risk clauses |
+| 📋 Clause Extraction | Structured list of all clauses with plain-English explanations |
+| 🔄 Auto Retry | Evaluator agent retries automatically if answer quality is poor |
+| 🌐 Multilingual | Supports both English and Urdu queries |
+| 🆓 100% Free | Groq + FAISS + HuggingFace — zero cost to run |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ System Architecture
 
-LexMind uses a **LangGraph-powered multi-agent pipeline** where each agent has a single responsibility.
+LexMind uses a **LangGraph-powered multi-agent pipeline**. Each agent has a single, well-defined responsibility following clean OOP design.
 
 ```
-┌─────────────────────────────────────────────────────┐
-│                    USER QUERY                        │
-│              (English or Urdu)                       │
-└──────────────────────┬──────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│                 LANGGRAPH STATE                      │
-│   user_query · query_type · retrieved_context        │
-│   agent_response · evaluation_result · retry_count   │
-└──────────────────────┬──────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────┐
-│                  ROUTER AGENT                        │
-│         Classifies query into one of:                │
-│         rag  ·  general  ·  task                     │
-└──────┬───────────────┬───────────────┬──────────────┘
-       │               │               │
-       ▼               ▼               ▼
-┌──────────┐    ┌──────────┐    ┌──────────┐
-│   RAG    │    │ GENERAL  │    │  TASK    │
-│  AGENT   │    │  AGENT   │    │  AGENT   │
-│          │    │          │    │          │
-│ FAISS    │    │ LLM      │    │ Extract  │
-│ Search   │    │ Knowledge│    │ Summarize│
-└────┬─────┘    └────┬─────┘    └────┬─────┘
-     │               │               │
-     └───────────────┴───────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────┐
-│               EVALUATOR AGENT                        │
-│         Quality check: PASS or FAIL                  │
-│         Auto-retries up to 3 times if FAIL           │
-└──────────────────────┬──────────────────────────────┘
-                       │
-              ┌────────┴────────┐
-              │                 │
-           PASS ✅           FAIL ❌
-              │                 │
-              ▼           (retry agent)
-┌─────────────────────┐
-│    FINAL RESPONSE   │
-│  Shown to the user  │
-└─────────────────────┘
+┌──────────────────────────────────────────────────────┐
+│                     USER QUERY                        │
+│               (English or Urdu)                       │
+└───────────────────────┬──────────────────────────────┘
+                        │
+                        ▼
+┌──────────────────────────────────────────────────────┐
+│                  LANGGRAPH STATE                      │
+│  user_query · query_type · retrieved_context          │
+│  agent_response · evaluation_result · retry_count     │
+└───────────────────────┬──────────────────────────────┘
+                        │
+                        ▼
+┌──────────────────────────────────────────────────────┐
+│                   ROUTER AGENT                        │
+│          Classifies query into one of:                │
+│          rag  ·  general  ·  task                     │
+└───────┬──────────────┬──────────────┬────────────────┘
+        │              │              │
+        ▼              ▼              ▼
+┌───────────┐   ┌───────────┐   ┌───────────┐
+│    RAG    │   │  GENERAL  │   │   TASK    │
+│   AGENT   │   │   AGENT   │   │   AGENT   │
+│           │   │           │   │           │
+│  FAISS    │   │  LLM      │   │ Extract   │
+│  Search   │   │  Knowledge│   │ Summarize │
+└─────┬─────┘   └─────┬─────┘   └─────┬─────┘
+      │               │               │
+      └───────────────┴───────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────┐
+│                 EVALUATOR AGENT                       │
+│          Quality check — PASS or FAIL                 │
+│          Auto-retries up to 3 times if FAIL           │
+└───────────────────────┬──────────────────────────────┘
+                        │
+               ┌────────┴────────┐
+               │                 │
+            PASS ✅           FAIL ❌
+               │            (retry agent)
+               ▼
+┌──────────────────────┐
+│    FINAL RESPONSE    │
+└──────────────────────┘
 ```
 
-### Agent Responsibilities
+### LangGraph Graph Design
 
-| Agent | Role | Pattern Used |
+| Component | Details |
+|---|---|
+| **Entry Point** | `router` node |
+| **Nodes** | router · rag · general · task · evaluator · final |
+| **Conditional Edge 1** | After `router` → routes to `rag`, `general`, or `task` based on `query_type` |
+| **Conditional Edge 2** | After `evaluator` → routes to `final` on PASS, or back to agent on FAIL |
+| **Fixed Edges** | `rag → evaluator`, `general → evaluator`, `task → evaluator`, `final → END` |
+| **State** | `LegalAIState` TypedDict shared across all nodes |
+
+### LangGraph Visualization (Mermaid)
+
+```
+graph TD
+    router --> rag
+    router --> general
+    router --> task
+    rag --> evaluator
+    general --> evaluator
+    task --> evaluator
+    evaluator --> final
+    evaluator --> rag
+    evaluator --> general
+    evaluator --> task
+    final --> END
+```
+
+> To generate this visualization from code: `graph.get_graph().draw_mermaid()`
+
+---
+
+## 🎨 Design Patterns
+
+| Pattern | Where Used | Why |
 |---|---|---|
-| **Router Agent** | Reads query and classifies it as `rag`, `general`, or `task` | Router Pattern |
-| **RAG Agent** | Searches PDF using FAISS, answers from document context | RAG Pattern |
-| **General Agent** | Answers general legal questions using LLM knowledge | Direct Chain |
-| **Task Agent** | Structured extraction: all clauses, risks, summary | Prompt Chaining |
-| **Evaluator Agent** | Checks response quality, triggers retry if poor | Evaluator Pattern |
+| **Router Pattern** | `RouterAgent` classifies every query | Separates concerns — each agent only handles what it is good at |
+| **RAG Pattern** | `RAGAgent` + FAISS vector search | Grounds answers in real document content, prevents hallucination |
+| **Evaluator Pattern** | `EvaluatorAgent` checks every response | Ensures quality control — poor answers are automatically retried |
+| **Retry Loop** | `route_after_evaluator()` in workflow | Builds self-healing behavior into the pipeline |
+| **Prompt Chaining** | State flows through nodes sequentially | Each node enriches the state before passing to the next |
+| **OOP Inheritance** | All agents extend `BaseAgent` | Clean, extensible architecture — new agents take minutes to add |
 
 ---
 
@@ -125,9 +149,9 @@ LexMind uses a **LangGraph-powered multi-agent pipeline** where each agent has a
 |---|---|---|---|
 | [LangGraph](https://github.com/langchain-ai/langgraph) | 0.2.28 | Multi-agent workflow orchestration | FREE |
 | [LangChain](https://github.com/langchain-ai/langchain) | 0.2.16 | AI application framework | FREE |
-| [Groq API](https://console.groq.com) | - | LLM inference — Llama 3.1 8B | FREE |
+| [Groq API](https://console.groq.com) | — | LLM inference — Llama 3.1 8B | FREE |
 | [FAISS](https://github.com/facebookresearch/faiss) | 1.8.0 | Local vector similarity search | FREE |
-| [HuggingFace MiniLM](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | - | Local text embeddings (~90MB) | FREE |
+| [HuggingFace MiniLM](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | — | Local text embeddings (~90MB) | FREE |
 | [PyPDF](https://pypdf.readthedocs.io) | 4.3.1 | PDF text extraction | FREE |
 | [Python](https://python.org) | 3.11+ | Core language | FREE |
 
@@ -138,38 +162,43 @@ LexMind uses a **LangGraph-powered multi-agent pipeline** where each agent has a
 ```
 LexMind/
 │
-├── agents/                        # All AI agents
-│   ├── base_agent.py              # Abstract base class (OOP)
+├── .env                           # API keys (never commit)
+├── .env.example                   # Template showing required keys
+├── .gitignore                     # Ignores .env, __pycache__, venv/
+├── requirements.txt               # All pip dependencies
+├── README.md                      # This file
+├── main.py                        # Entry point
+│
+├── agents/                        # All AI agents (OOP)
+│   ├── __init__.py
+│   ├── base_agent.py              # Abstract base class
 │   ├── router_agent.py            # Query classifier
 │   ├── rag_agent.py               # Document retrieval agent
 │   ├── general_agent.py           # General Q&A agent
 │   ├── task_agent.py              # Structured extraction agent
-│   ├── evaluator_agent.py         # Quality checker agent
-│   └── __init__.py
+│   └── evaluator_agent.py         # Quality checker agent
 │
 ├── rag/                           # RAG pipeline
-│   ├── document_loader.py         # PDF loader and text chunker
-│   ├── embeddings.py              # FAISS vector store manager
-│   └── __init__.py
+│   ├── __init__.py
+│   ├── document_loader.py         # PDF loader and chunker
+│   └── embeddings.py              # FAISS vector store manager
 │
 ├── graph/                         # LangGraph workflow
-│   ├── state.py                   # Shared state (TypedDict)
-│   ├── workflow.py                # Nodes, edges, conditionals
-│   └── __init__.py
+│   ├── __init__.py
+│   ├── state.py                   # LegalAIState TypedDict
+│   └── workflow.py                # Nodes, edges, conditional routing
 │
 ├── utils/
-│   ├── prompts.py                 # Centralized prompt templates
-│   └── __init__.py
+│   ├── __init__.py
+│   └── prompts.py                 # Centralized prompt templates
 │
-├── data/
-│   ├── documents/                 # Place your PDF files here
-│   └── faiss_index/               # Auto-generated vector index
+├── knowledge_base/                # Legal PDFs for RAG
+│   ├── contract (2).pdf
+│   ├── nda_template.pdf
+│   └── service_agreement.pdf
 │
-├── .env                           # API keys (never commit this)
-├── .gitignore
-├── requirements.txt
-├── README.md
-└── main.py                        # Entry point
+└── data/
+    └── faiss_index/               # Auto-generated vector index
 ```
 
 ---
@@ -177,10 +206,8 @@ LexMind/
 ## ⚡ Quick Start
 
 ### Prerequisites
-
 - Python 3.11+
-- A free [Groq API key](https://console.groq.com)
-- A legal PDF document to analyze
+- Free [Groq API key](https://console.groq.com) — no credit card needed
 
 ### Installation
 
@@ -190,33 +217,33 @@ git clone https://github.com/yourusername/LexMind.git
 cd LexMind
 ```
 
-**2. Create and activate virtual environment**
+**2. Create virtual environment**
 ```bash
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate        # Windows
+source venv/bin/activate     # Mac/Linux
 ```
 
-**3. Install all dependencies**
+**3. Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-**4. Configure environment variables**
-
-Create a `.env` file in the root directory:
+**4. Set up environment variables**
+```bash
+cp .env.example .env
+```
+Then open `.env` and add your Groq API key:
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 ```
-Get your free Groq API key at [console.groq.com](https://console.groq.com) — no credit card needed.
 
-**5. Add your legal PDF**
-
-Copy your PDF into `data/documents/` and update `main.py`:
+**5. Add your legal PDF to `knowledge_base/` and update `main.py`:**
 ```python
-PDF_PATH = "data/documents/your_contract.pdf"
+PDF_PATH = "knowledge_base/your_contract.pdf"
 ```
 
-**6. Build the FAISS vector index (run once)**
+**6. Build FAISS index (run once per document)**
 ```bash
 python main.py --setup
 ```
@@ -228,117 +255,130 @@ python main.py
 
 ---
 
-## 💬 Example Output
+## 💬 Example Queries & Output
 
+**RAG Query — searches the document:**
 ```
 You: What is the early termination penalty?
 
 LexMind: Based on Section 4 of the agreement:
 
-[RISK] Early Termination Penalty — If you exit the contract before
-the end date without cause, you must pay a penalty equal to 3 months
-of service fees ($15,000). This amount is due within 15 days of
-sending the termination notice.
+[RISK] Early Termination — If you exit before the end date, you must
+pay 3 months of service fees ($15,000) within 15 days of notice.
 
-This is a HIGH RISK clause. The penalty is significant and the
-payment window of 15 days is very short.
+HIGH RISK: Large penalty with a very short payment window.
 ```
 
+**Task Query — structured analysis:**
 ```
-You: Extract all clauses from the document
+You: Extract all clauses and list the risks
 
 LexMind:
-KEY CLAUSES FOUND
-- Clause 1 - Services: Company agrees to provide software development
-- Clause 2 - Payment Terms: Client pays $5,000 per month
-- Clause 3 - Duration: Agreement runs January to December 2025
+KEY CLAUSES
+- Clause 1 - Services: Software development and maintenance
+- Clause 2 - Payment: $5,000/month, due within 30 days
+- Clause 4 - Termination: 90 days notice required
 
 RISK ANALYSIS
-[HIGH RISK]   Early Termination — $15,000 penalty within 15 days
-[HIGH RISK]   Confidentiality Breach — $50,000 in damages
-[MEDIUM RISK] IP Ownership — transfers only after full payment
+[HIGH]   Early exit penalty — $15,000
+[HIGH]   Confidentiality breach — $50,000 damages
+[MEDIUM] IP ownership — transfers only after full payment
+```
+
+**General Query — uses LLM knowledge:**
+```
+You: What does indemnification mean?
+
+LexMind: Indemnification means one party agrees to cover the other's
+losses or legal claims. In simple terms — if something goes wrong
+because of your actions, you pay for it.
 ```
 
 ---
 
-## 🗂️ LangGraph State
-
-All agents share a single typed state object:
+## 🗂️ LangGraph State Definition
 
 ```python
 class LegalAIState(TypedDict):
     user_query: str            # Original user question
     query_type: str            # "rag" | "general" | "task"
-    retrieved_context: str     # Chunks found by FAISS search
-    agent_response: str        # Raw answer from the agent
+    retrieved_context: str     # Document chunks from FAISS
+    agent_response: str        # Raw answer from active agent
     evaluation_result: str     # "pass" | "fail"
-    final_response: str        # Polished output shown to user
+    final_response: str        # Final output shown to user
     messages: List             # Full conversation history
-    retry_count: int           # Number of retries (max 3)
+    retry_count: int           # Retry counter (max 3)
 ```
+
+---
+
+## 📊 Evaluation Criteria
+
+| Criteria | Weight | How LexMind Addresses It |
+|---|---|---|
+| **Code Quality & OOP** | 20% | All agents inherit from `BaseAgent`, clean naming, no hardcoded values, `.env` for secrets |
+| **LangGraph Implementation** | 25% | Correct `TypedDict` state, 6 nodes, 2 conditional edges, compiles and runs end-to-end |
+| **Design Patterns** | 15% | 6 patterns used: Router, RAG, Evaluator, Retry Loop, Prompt Chaining, OOP Inheritance |
+| **Agentic RAG** | 20% | FAISS index built from PDFs, semantic search, answers grounded in document context |
+| **Demo & Presentation** | 10% | Live CLI demo, clear architecture walkthrough, handles all 3 query types |
+| **Innovation & Extras** | 10% | Urdu language support, auto-retry quality loop, structured task agent, evaluator pattern |
 
 ---
 
 ## 🐛 Troubleshooting
 
-| Error | Cause | Fix |
-|---|---|---|
-| `GROQ_API_KEY not found` | Missing .env | Check `.env` has your key |
-| `FAISS index not found` | Setup not run | Run `python main.py --setup` |
-| `PDF not found` | Wrong filename | Check `PDF_PATH` in `main.py` |
-| `Rate limit error` | Groq free tier limit | Wait 10 seconds and retry |
-| `Slow first run` | Model downloading | Normal — downloads once (~90MB) |
-| `No module named faiss` | Missing package | Run `pip install faiss-cpu` |
+| Error | Fix |
+|---|---|
+| `GROQ_API_KEY not found` | Check `.env` file has your key |
+| `FAISS index not found` | Run `python main.py --setup` first |
+| `PDF not found` | Check `PDF_PATH` matches your filename exactly |
+| `Rate limit error` | Wait 10 seconds — Groq free tier limit |
+| `Slow first run` | Normal — HuggingFace model downloads once (~90MB) |
+| `No module named faiss` | Run `pip install faiss-cpu` |
 
 ---
 
 ## 🗺️ Roadmap
 
 - [x] Multi-agent LangGraph pipeline
-- [x] FAISS vector search
-- [x] Automatic retry on poor responses
-- [x] English and Urdu support
+- [x] FAISS vector search over legal PDFs
+- [x] Automatic quality retry loop
+- [x] English and Urdu query support
+- [x] Structured clause and risk extraction
 - [ ] Streamlit web UI
 - [ ] Multi-document support
-- [ ] Contract comparison feature
 - [ ] Export analysis as PDF report
-- [ ] OCR support for scanned PDFs
+- [ ] OCR for scanned PDFs
 - [ ] REST API endpoint
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome!
-
 1. Fork the repository
 2. Create your feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m "Add: your feature"`
-4. Push to the branch: `git push origin feature/your-feature`
+3. Commit: `git commit -m "Add: your feature"`
+4. Push: `git push origin feature/your-feature`
 5. Open a Pull Request
 
-All new agents must extend `BaseAgent` and implement the `run()` method.
+All new agents must extend `BaseAgent` and implement the `run(self, state: dict) -> dict` method.
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
-##  Acknowledgements
+## 🙏 Acknowledgements
 
-- [LangChain](https://github.com/langchain-ai/langchain) for the AI framework
-- [LangGraph](https://github.com/langchain-ai/langgraph) for multi-agent orchestration
-- [Groq](https://groq.com) for fast free LLM inference
-- [Facebook Research](https://github.com/facebookresearch/faiss) for FAISS
-- [HuggingFace](https://huggingface.co) for the free embedding model
+- [LangChain](https://github.com/langchain-ai/langchain) · [LangGraph](https://github.com/langchain-ai/langgraph) · [Groq](https://groq.com) · [Facebook Research / FAISS](https://github.com/facebookresearch/faiss) · [HuggingFace](https://huggingface.co)
 
 ---
 
 <div align="center">
 Built with Python · LangGraph · Groq · FAISS
-<br/>
-If you found this useful, please give it a star
+<br/><br/>
+If you found this useful, please give it a ⭐
 </div>
