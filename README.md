@@ -363,11 +363,6 @@ class LegalAIState(TypedDict):
 
 All new agents must extend `BaseAgent` and implement the `run(self, state: dict) -> dict` method.
 
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 ---
 
